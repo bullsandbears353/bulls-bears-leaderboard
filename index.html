@@ -62,7 +62,6 @@ async function loadLeaderboard() {
 
     let stocks = [];
 
-    // stock data starts at column index 3
     for (let i = 3; i < cols.length; i += 4) {
       if (cols[i]) {
         stocks.push({
@@ -74,6 +73,9 @@ async function loadLeaderboard() {
       }
     }
 
+    // Sort stocks from least profitable to most
+    stocks.sort((a,b) => a.ret - b.ret);
+
     return {
       name: cols[0],
       value: parseFloat(cols[1]),
@@ -82,6 +84,7 @@ async function loadLeaderboard() {
     };
   });
 
+  // Sort leaderboard by total return
   data.sort((a, b) => b.ret - a.ret);
 
   const tbody = document.querySelector("#leaderboard tbody");
@@ -89,35 +92,59 @@ async function loadLeaderboard() {
 
   data.forEach((row, i) => {
 
+    let medal = "";
+    let medalColor = "";
+
+    if (i === 0) {
+      medal = "🥇 ";
+      medalColor = "#FFD700";
+    } else if (i === 1) {
+      medal = "🥈 ";
+      medalColor = "#C0C0C0";
+    } else if (i === 2) {
+      medal = "🥉 ";
+      medalColor = "#CD7F32";
+    }
+
     // MAIN ROW
     const tr = document.createElement("tr");
+
     tr.innerHTML = `
       <td>${i + 1}</td>
-      <td style="cursor:pointer;" onclick="toggleRow(${i})">
-        ▶ ${row.name}
+      <td>
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;"
+             onclick="toggleRow(${i})">
+          <span style="color:${medalColor}; font-weight:bold;">
+            ${medal}${row.name}
+          </span>
+          <span id="arrow-${i}" style="transition: transform 0.3s ease;">▼</span>
+        </div>
       </td>
       <td>${row.value.toFixed(2)}</td>
       <td style="color:${row.ret >= 0 ? '#22c55e' : '#ef4444'}">
         ${(row.ret * 100).toFixed(2)}%
       </td>
     `;
+
     tbody.appendChild(tr);
 
     // DETAIL ROW
     const detailRow = document.createElement("tr");
     detailRow.id = "detail-" + i;
-    detailRow.style.display = "none";
 
     detailRow.innerHTML = `
       <td colspan="4">
-        ${row.stocks.map(s => `
-          <div style="display:flex; justify-content:space-between; padding:6px 0;">
-            <span>${s.ticker} (${s.shares} shares)</span>
-            <span style="color:${s.ret >= 0 ? '#22c55e' : '#ef4444'}">
-              ${(s.ret * 100).toFixed(2)}%
-            </span>
-          </div>
-        `).join("")}
+        <div id="content-${i}" 
+             style="max-height:0; overflow:hidden; transition:max-height 0.4s ease;">
+          ${row.stocks.map(s => `
+            <div style="display:flex; justify-content:space-between; padding:6px 0;">
+              <span>${s.ticker} (${s.shares} shares)</span>
+              <span style="color:${s.ret >= 0 ? '#22c55e' : '#ef4444'}">
+                ${(s.ret * 100).toFixed(2)}%
+              </span>
+            </div>
+          `).join("")}
+        </div>
       </td>
     `;
 
@@ -126,8 +153,16 @@ async function loadLeaderboard() {
 }
 
 function toggleRow(index) {
-  const row = document.getElementById("detail-" + index);
-  row.style.display = row.style.display === "none" ? "table-row" : "none";
+  const content = document.getElementById("content-" + index);
+  const arrow = document.getElementById("arrow-" + index);
+
+  if (content.style.maxHeight === "0px" || content.style.maxHeight === "") {
+    content.style.maxHeight = content.scrollHeight + "px";
+    arrow.style.transform = "rotate(180deg)";
+  } else {
+    content.style.maxHeight = "0px";
+    arrow.style.transform = "rotate(0deg)";
+  }
 }
 
 loadLeaderboard();
