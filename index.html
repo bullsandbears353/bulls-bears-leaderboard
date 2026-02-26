@@ -51,55 +51,87 @@
 <script>
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQd4ulibSZtAF880aqCN7PSbSFDVKVue2q8AB-4SCc0PG12QhHaXc_QqxBs37F7QZJAduBcDu7NVRt9/pub?gid=732807087&single=true&output=csv";
 
-fetch(SHEET_URL + "&t=" + new Date().getTime())
-  .then(response => response.text())
-  .then(text => {
-    const rows = text.trim().split("\n").slice(1);
-    const data = rows.map(r => {
-      const [name, value, ret] = r.split(",");
-      return {
-        name,
-        value: parseFloat(value),
-        ret: parseFloat(ret)
-      };
-    });
+async function loadLeaderboard() {
+  const response = await fetch(SHEET_URL + "&t=" + new Date().getTime());
+  const text = await response.text();
 
-    data.sort((a, b) => b.ret - a.ret);
+  const rows = text.trim().split("\n").slice(1);
 
-    const tbody = document.querySelector("#leaderboard tbody");
-    tbody.innerHTML = "";
+  const data = rows.map(r => {
+    const cols = r.split(",");
 
-    data.forEach((row, i) => {
+    let stocks = [];
 
-      let rankDisplay = i + 1;
-      let rowStyle = "";
-
-      if (i === 0) {
-        rankDisplay = "🥇 1";
-        rowStyle = "background: rgba(255, 215, 0, 0.15);";
-      } else if (i === 1) {
-        rankDisplay = "🥈 2";
-        rowStyle = "background: rgba(192, 192, 192, 0.15);";
-      } else if (i === 2) {
-        rankDisplay = "🥉 3";
-        rowStyle = "background: rgba(205, 127, 50, 0.15);";
+    // stock data starts at column index 3
+    for (let i = 3; i < cols.length; i += 4) {
+      if (cols[i]) {
+        stocks.push({
+          ticker: cols[i],
+          shares: cols[i+1],
+          value: parseFloat(cols[i+2]),
+          ret: parseFloat(cols[i+3])
+        });
       }
+    }
 
-      const tr = document.createElement("tr");
-      tr.style = rowStyle;
-
-      tr.innerHTML = `
-        <td>${rankDisplay}</td>
-        <td>${row.name}</td>
-        <td>${row.value.toFixed(2)}</td>
-        <td style="color:${row.ret >= 0 ? '#22c55e' : '#ef4444'}">
-          ${(row.ret * 100).toFixed(2)}%
-        </td>
-      `;
-
-      tbody.appendChild(tr);
-    });
+    return {
+      name: cols[0],
+      value: parseFloat(cols[1]),
+      ret: parseFloat(cols[2]),
+      stocks
+    };
   });
+
+  data.sort((a, b) => b.ret - a.ret);
+
+  const tbody = document.querySelector("#leaderboard tbody");
+  tbody.innerHTML = "";
+
+  data.forEach((row, i) => {
+
+    // MAIN ROW
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td style="cursor:pointer;" onclick="toggleRow(${i})">
+        ▶ ${row.name}
+      </td>
+      <td>${row.value.toFixed(2)}</td>
+      <td style="color:${row.ret >= 0 ? '#22c55e' : '#ef4444'}">
+        ${(row.ret * 100).toFixed(2)}%
+      </td>
+    `;
+    tbody.appendChild(tr);
+
+    // DETAIL ROW
+    const detailRow = document.createElement("tr");
+    detailRow.id = "detail-" + i;
+    detailRow.style.display = "none";
+
+    detailRow.innerHTML = `
+      <td colspan="4">
+        ${row.stocks.map(s => `
+          <div style="display:flex; justify-content:space-between; padding:6px 0;">
+            <span>${s.ticker} (${s.shares} shares)</span>
+            <span style="color:${s.ret >= 0 ? '#22c55e' : '#ef4444'}">
+              ${(s.ret * 100).toFixed(2)}%
+            </span>
+          </div>
+        `).join("")}
+      </td>
+    `;
+
+    tbody.appendChild(detailRow);
+  });
+}
+
+function toggleRow(index) {
+  const row = document.getElementById("detail-" + index);
+  row.style.display = row.style.display === "none" ? "table-row" : "none";
+}
+
+loadLeaderboard();
+setInterval(loadLeaderboard, 60000);
 </script>
 
 </body>
