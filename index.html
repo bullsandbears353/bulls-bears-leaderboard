@@ -73,8 +73,8 @@ async function loadLeaderboard() {
       }
     }
 
-    // Sort stocks from least profitable to most
-    stocks.sort((a,b) => a.ret - b.ret);
+    // Sort stocks from most profitable to least
+    stocks.sort((a,b) => b.ret - a.ret);
 
     return {
       name: cols[0],
