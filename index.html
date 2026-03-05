@@ -7,154 +7,146 @@
 <style>
 
 body{
-font-family:Arial;
-background:#0f172a;
-color:white;
-padding:40px;
+  font-family:Arial;
+  background:#0f172a;
+  color:white;
+  padding:40px;
 }
 
 h1{
-text-align:center;
-margin-bottom:10px;
+  text-align:center;
+  margin-bottom:10px;
 }
 
 #updateTime{
-text-align:center;
-opacity:.7;
-margin-bottom:25px;
+  text-align:center;
+  opacity:.7;
+  margin-bottom:25px;
 }
 
 .main{
-display:flex;
-gap:40px;
-align-items:flex-start;
+  display:flex;
+  gap:40px;
+  align-items:flex-start;
 }
 
 /* LEFT PANEL */
 
 .leftPanel{
-width:260px;
+  width:260px;
 }
 
 .card{
-background:#020617;
-border-radius:10px;
-padding:20px;
-margin-bottom:20px;
+  background:#020617;
+  border-radius:10px;
+  padding:20px;
+  margin-bottom:20px;
 }
 
 .card h2{
-margin-top:0;
-font-size:18px;
-border-bottom:1px solid #334155;
-padding-bottom:8px;
+  margin-top:0;
+  font-size:18px;
+  border-bottom:1px solid #334155;
+  padding-bottom:8px;
 }
 
 /* STATS */
 
 .stat{
-display:flex;
-justify-content:space-between;
-padding:6px 0;
-font-size:14px;
+  display:flex;
+  justify-content:space-between;
+  padding:6px 0;
+  font-size:14px;
 }
 
 /* HEATMAP */
 
 .heatmap{
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:8px;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
 }
 
 .heatTile{
-width:55px;
-height:55px;
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-font-size:11px;
-border-radius:6px;
-font-weight:bold;
-transition:transform .15s ease;
+  width:50px;
+  height:50px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  font-size:11px;
+  border-radius:6px;
+  font-weight:bold;
+  transition:transform .15s ease;
 }
 
 .heatTile:hover{
-transform:scale(1.08);
+  transform:scale(1.08);
 }
 
 /* LEADERBOARD */
 
 table{
-border-collapse:collapse;
-width:650px;
-background:#020617;
+  border-collapse:collapse;
+  width:650px;
+  background:#020617;
 }
 
 th,td{
-padding:12px;
-border-bottom:1px solid #334155;
-text-align:center;
+  padding:12px;
+  border-bottom:1px solid #334155;
+  text-align:center;
 }
 
 tr{
-transition:background .2s ease;
+  transition:background .2s ease;
 }
 
 tr:hover{
-background:#1e293b;
+  background:#1e293b;
 }
 
-/* PORTFOLIO BARS */
+/* TOP 3 COLORS */
+
+.goldRow{
+  background:rgba(255,215,0,0.15);
+}
+
+.silverRow{
+  background:rgba(192,192,192,0.15);
+}
+
+.bronzeRow{
+  background:rgba(205,127,50,0.15);
+}
 
 .bar-container{
-width:100%;
-background:#1e293b;
-height:8px;
-border-radius:5px;
-margin-top:4px;
+  width:100%;
+  background:#1e293b;
+  height:8px;
+  border-radius:5px;
+  margin-top:4px;
 }
 
 .bar{
-height:8px;
-border-radius:5px;
-background:#22c55e;
+  height:8px;
+  border-radius:5px;
+  background:#22c55e;
 }
 
-/* RANK ARROWS */
+/* Rank arrow */
 
-.rankArrow{
-font-size:11px;
-margin-left:5px;
+.rankChange{
+  font-size:11px;
+  margin-left:4px;
 }
 
-.rankUp{
-color:#22c55e;
+.up{
+  color:#22c55e;
 }
 
-.rankDown{
-color:#ef4444;
-}
-
-/* FLASH EFFECT */
-
-@keyframes flashUp{
-0%{background:rgba(34,197,94,.35)}
-100%{background:transparent}
-}
-
-@keyframes flashDown{
-0%{background:rgba(239,68,68,.35)}
-100%{background:transparent}
-}
-
-.flashUp{
-animation:flashUp .8s ease;
-}
-
-.flashDown{
-animation:flashDown .8s ease;
+.down{
+  color:#ef4444;
 }
 
 </style>
@@ -236,8 +228,7 @@ const text = await response.text();
 
 const rows = text.trim().split("\n").slice(1);
 
-let allStocks=[];
-
+let allStocks = {};
 const data = rows.map(r=>{
 
 const cols=r.split(",");
@@ -248,15 +239,22 @@ for(let i=3;i<cols.length;i+=4){
 
 if(cols[i]){
 
-let stock={
-ticker:cols[i],
-shares:parseFloat(cols[i+1]),
+let ticker=cols[i];
+let ret=parseFloat(cols[i+3]);
+
+let stockObj={
+ticker:ticker,
+shares:cols[i+1],
 value:parseFloat(cols[i+2]),
-ret:parseFloat(cols[i+3])
+ret:ret
 };
 
-stocks.push(stock);
-allStocks.push(stock);
+stocks.push(stockObj);
+
+/* prevent duplicates */
+if(!(ticker in allStocks)){
+allStocks[ticker]=ret;
+}
 
 }
 
@@ -289,18 +287,20 @@ document.getElementById("statWorst").innerText=(data[data.length-1].ret*100).toF
 const heatmap=document.getElementById("heatmap");
 heatmap.innerHTML="";
 
-allStocks.sort((a,b)=>b.ret-a.ret);
+let stockArray=Object.entries(allStocks);
 
-const maxAbs=Math.max(...allStocks.map(s=>Math.abs(s.ret)));
+stockArray.sort((a,b)=>b[1]-a[1]);
 
-allStocks.forEach(s=>{
+const maxAbsReturn=Math.max(...stockArray.map(s=>Math.abs(s[1])));
 
-const intensity=Math.abs(s.ret)/maxAbs;
+stockArray.forEach(s=>{
+
+const intensity=Math.abs(s[1])/maxAbsReturn;
 
 let red=0;
 let green=0;
 
-if(s.ret>=0){
+if(s[1]>=0){
 green=Math.round(255*intensity);
 }else{
 red=Math.round(255*intensity);
@@ -312,9 +312,9 @@ tile.className="heatTile";
 tile.style.background=`rgb(${red},${green},0)`;
 
 tile.innerHTML=`
-${s.ticker}
+${s[0]}
 <br>
-${(s.ret*100).toFixed(1)}%
+${(s[1]*100).toFixed(1)}%
 `;
 
 heatmap.appendChild(tile);
@@ -328,42 +328,62 @@ tbody.innerHTML="";
 
 data.forEach((row,i)=>{
 
-let prevRank=previousRanks[row.name];
-let arrow="";
-let flashClass="";
+let medal="";
+let medalColor="";
+let rowClass="";
+
+if(i===0){
+medal="🥇 ";
+medalColor="#FFD700";
+rowClass="goldRow";
+}
+else if(i===1){
+medal="🥈 ";
+medalColor="#C0C0C0";
+rowClass="silverRow";
+}
+else if(i===2){
+medal="🥉 ";
+medalColor="#CD7F32";
+rowClass="bronzeRow";
+}
+
+const prevRank = previousRanks[row.name];
+let arrowHTML="";
 
 if(prevRank){
 
 let diff=prevRank-(i+1);
 
 if(diff>0){
-arrow=`<span class="rankArrow rankUp">▲</span>`;
-flashClass="flashUp";
+arrowHTML=`<span class="rankChange up">▲${diff}</span>`;
 }
-
-if(diff<0){
-arrow=`<span class="rankArrow rankDown">▼</span>`;
-flashClass="flashDown";
+else if(diff<0){
+arrowHTML=`<span class="rankChange down">▼${Math.abs(diff)}</span>`;
 }
 
 }
 
 const tr=document.createElement("tr");
-tr.className=flashClass;
+tr.className=rowClass;
 
 tr.innerHTML=`
 
-<td>${i+1} ${arrow}</td>
+<td>${i+1} ${arrowHTML}</td>
 
 <td>
+
 <div style="display:flex; justify-content:space-between; cursor:pointer;"
 onclick="toggleRow(${i})">
 
-<span style="font-weight:bold">${row.name}</span>
+<span style="color:${medalColor}; font-weight:bold">
+${medal}${row.name}
+</span>
 
 <span id="arrow-${i}" style="transition:transform .3s">▼</span>
 
 </div>
+
 </td>
 
 <td>
@@ -385,6 +405,7 @@ ${(row.ret*100).toFixed(2)}%
 tbody.appendChild(tr);
 
 const detailRow=document.createElement("tr");
+detailRow.id="detail-"+i;
 
 detailRow.innerHTML=`
 
@@ -396,7 +417,7 @@ ${row.stocks.map(s=>`
 
 <div style="display:flex; justify-content:space-between; padding:6px 0">
 
-<span>${s.ticker} (${s.shares.toFixed(2)} shares)</span>
+<span>${s.ticker} (${parseFloat(s.shares).toFixed(2)} shares)</span>
 
 <span style="color:${s.ret>=0?'#22c55e':'#ef4444'}">
 ${(s.ret*100).toFixed(2)}%
@@ -417,7 +438,10 @@ tbody.appendChild(detailRow);
 });
 
 let newRanks={};
-data.forEach((row,i)=>{ newRanks[row.name]=i+1 });
+
+data.forEach((row,i)=>{
+newRanks[row.name]=i+1;
+});
 
 localStorage.setItem("leaderboardRanks",JSON.stringify(newRanks));
 
@@ -432,11 +456,15 @@ const content=document.getElementById("content-"+index);
 const arrow=document.getElementById("arrow-"+index);
 
 if(content.style.maxHeight==="0px"||content.style.maxHeight===""){
+
 content.style.maxHeight=content.scrollHeight+"px";
 arrow.style.transform="rotate(180deg)";
+
 }else{
+
 content.style.maxHeight="0px";
 arrow.style.transform="rotate(0deg)";
+
 }
 
 }
