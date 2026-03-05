@@ -138,7 +138,7 @@ async function loadLeaderboard() {
              style="max-height:0; overflow:hidden; transition:max-height 0.4s ease;">
           ${row.stocks.map(s => `
             <div style="display:flex; justify-content:space-between; padding:6px 0;">
-              <span>${s.ticker} (${s.shares} shares)</span>
+              <span>${s.ticker} (${parseFloat(s.shares).toFixed(2)} shares)</span>
               <span style="color:${s.ret >= 0 ? '#22c55e' : '#ef4444'}">
                 ${(s.ret * 100).toFixed(2)}%
               </span>
