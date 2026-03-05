@@ -106,6 +106,12 @@ tr:hover{
   background:#1e293b;
 }
 
+/* FIXED RANK COLUMN */
+
+th:first-child, td:first-child{
+  width:60px;
+}
+
 /* TOP 3 COLORS */
 
 .goldRow{
@@ -136,9 +142,17 @@ tr:hover{
 
 /* Rank arrow */
 
-.rankChange{
+.rankCell{
+  position:relative;
+  font-weight:bold;
+}
+
+.rankArrow{
+  position:absolute;
+  right:4px;
+  top:50%;
+  transform:translateY(-50%);
   font-size:11px;
-  margin-left:4px;
 }
 
 .up{
@@ -229,6 +243,7 @@ const text = await response.text();
 const rows = text.trim().split("\n").slice(1);
 
 let allStocks = {};
+
 const data = rows.map(r=>{
 
 const cols=r.split(",");
@@ -251,7 +266,6 @@ ret:ret
 
 stocks.push(stockObj);
 
-/* prevent duplicates */
 if(!(ticker in allStocks)){
 allStocks[ticker]=ret;
 }
@@ -288,7 +302,6 @@ const heatmap=document.getElementById("heatmap");
 heatmap.innerHTML="";
 
 let stockArray=Object.entries(allStocks);
-
 stockArray.sort((a,b)=>b[1]-a[1]);
 
 const maxAbsReturn=Math.max(...stockArray.map(s=>Math.abs(s[1])));
@@ -307,14 +320,11 @@ red=Math.round(255*intensity);
 }
 
 let tile=document.createElement("div");
-
 tile.className="heatTile";
 tile.style.background=`rgb(${red},${green},0)`;
 
 tile.innerHTML=`
-${s[0]}
-<br>
-${(s[1]*100).toFixed(1)}%
+${s[0]}<br>${(s[1]*100).toFixed(1)}%
 `;
 
 heatmap.appendChild(tile);
@@ -356,10 +366,10 @@ if(prevRank){
 let diff=prevRank-(i+1);
 
 if(diff>0){
-arrowHTML=`<span class="rankChange up">▲${diff}</span>`;
+arrowHTML=`<span class="rankArrow up">▲${diff}</span>`;
 }
 else if(diff<0){
-arrowHTML=`<span class="rankChange down">▼${Math.abs(diff)}</span>`;
+arrowHTML=`<span class="rankArrow down">▼${Math.abs(diff)}</span>`;
 }
 
 }
@@ -369,7 +379,7 @@ tr.className=rowClass;
 
 tr.innerHTML=`
 
-<td>${i+1} ${arrowHTML}</td>
+<td class="rankCell">${i+1}${arrowHTML}</td>
 
 <td>
 
@@ -405,7 +415,6 @@ ${(row.ret*100).toFixed(2)}%
 tbody.appendChild(tr);
 
 const detailRow=document.createElement("tr");
-detailRow.id="detail-"+i;
 
 detailRow.innerHTML=`
 
