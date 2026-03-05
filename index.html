@@ -77,6 +77,11 @@ h1{
   font-size:11px;
   border-radius:6px;
   font-weight:bold;
+  transition:transform .15s ease;
+}
+
+.heatTile:hover{
+  transform:scale(1.08);
 }
 
 /* LEADERBOARD */
@@ -159,7 +164,6 @@ tr:hover{
 
 </div>
 
-
 <div>
 
 <table id="leaderboard">
@@ -195,7 +199,7 @@ const text = await response.text();
 
 const rows = text.trim().split("\n").slice(1);
 
-let allStocks = {};
+let allStocks = [];
 
 const data = rows.map(r=>{
 
@@ -210,14 +214,15 @@ if(cols[i]){
 let ticker=cols[i];
 let ret=parseFloat(cols[i+3]);
 
-stocks.push({
+let stockObj={
 ticker:ticker,
 shares:cols[i+1],
 value:parseFloat(cols[i+2]),
 ret:ret
-});
+};
 
-allStocks[ticker]=ret;
+stocks.push(stockObj);
+allStocks.push(stockObj);
 
 }
 
@@ -247,35 +252,35 @@ document.getElementById("statWorst").innerText=(data[data.length-1].ret*100).toF
 
 /* HEATMAP */
 
-let stockArray = Object.entries(allStocks);
-
-stockArray.sort((a,b)=>b[1]-a[1]);
-
 const heatmap=document.getElementById("heatmap");
 heatmap.innerHTML="";
 
-let best = stockArray[0][1];
-let worst = stockArray[stockArray.length-1][1];
+allStocks.sort((a,b)=>b.ret-a.ret);
 
-stockArray.forEach(s=>{
+const maxAbsReturn=Math.max(...allStocks.map(s=>Math.abs(s.ret)));
 
-let ratio=(s[1]-worst)/(best-worst);
+allStocks.forEach(s=>{
 
-let r=Math.floor(239-(239-34)*ratio);
-let g=Math.floor(68+(197-68)*ratio);
-let b=Math.floor(68-(68-94)*ratio);
+const intensity=Math.abs(s.ret)/maxAbsReturn;
 
-let color=`rgb(${r},${g},${b})`;
+let red=0;
+let green=0;
+
+if(s.ret>=0){
+green=Math.round(255*intensity);
+}else{
+red=Math.round(255*intensity);
+}
 
 let tile=document.createElement("div");
 
 tile.className="heatTile";
-tile.style.background=color;
+tile.style.background=`rgb(${red},${green},0)`;
 
 tile.innerHTML=`
-${s[0]}
+${s.ticker}
 <br>
-${(s[1]*100).toFixed(1)}%
+${(s.ret*100).toFixed(1)}%
 `;
 
 heatmap.appendChild(tile);
@@ -383,9 +388,7 @@ tbody.appendChild(detailRow);
 let newRanks={};
 
 data.forEach((row,i)=>{
-
 newRanks[row.name]=i+1;
-
 });
 
 localStorage.setItem("leaderboardRanks",JSON.stringify(newRanks));
