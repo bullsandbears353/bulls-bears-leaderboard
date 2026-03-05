@@ -23,6 +23,27 @@ h1{
   margin-bottom:20px;
 }
 
+/* CLUB STATS */
+
+#clubStats{
+  display:flex;
+  justify-content:center;
+  gap:40px;
+  margin-bottom:30px;
+  font-size:18px;
+  flex-wrap:wrap;
+}
+
+.statBox{
+  background:#020617;
+  padding:15px 25px;
+  border-radius:8px;
+  text-align:center;
+  border:1px solid #334155;
+}
+
+/* TABLE */
+
 table{
   margin:auto;
   border-collapse:collapse;
@@ -62,12 +83,38 @@ th{
   background:#22c55e;
 }
 
+/* HEATMAP */
+
+#heatmapTitle{
+  text-align:center;
+  margin-top:40px;
+}
+
+#heatmap{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:10px;
+  margin-top:20px;
+}
+
+.heatBox{
+  padding:14px;
+  min-width:80px;
+  text-align:center;
+  border-radius:6px;
+  font-weight:bold;
+}
+
 </style>
 </head>
 
 <body>
 
 <h1>Finance Club Leaderboard</h1>
+
+<div id="clubStats"></div>
+
 <p id="updateTime"></p>
 
 <table id="leaderboard">
@@ -81,6 +128,9 @@ th{
 </thead>
 <tbody></tbody>
 </table>
+
+<h2 id="heatmapTitle">Club Market Heatmap</h2>
+<div id="heatmap"></div>
 
 <script>
 
@@ -132,6 +182,49 @@ data.sort((a,b)=>b.ret-a.ret);
 
 const tbody=document.querySelector("#leaderboard tbody");
 tbody.innerHTML="";
+
+/* CLUB STATS CALCULATION */
+
+let totalTraders=data.length;
+
+let avgReturn=data.reduce((sum,p)=>sum+p.ret,0)/totalTraders;
+
+let bestReturn=Math.max(...data.map(p=>p.ret));
+
+let stockCount={};
+
+data.forEach(p=>{
+p.stocks.forEach(s=>{
+stockCount[s.ticker]=(stockCount[s.ticker]||0)+1;
+});
+});
+
+let mostPopularStock=Object.keys(stockCount).reduce((a,b)=>
+stockCount[a]>stockCount[b]?a:b);
+
+/* DISPLAY CLUB STATS */
+
+document.getElementById("clubStats").innerHTML=`
+
+<div class="statBox">
+Total Traders<br><b>${totalTraders}</b>
+</div>
+
+<div class="statBox">
+Average Return<br><b>${(avgReturn*100).toFixed(2)}%</b>
+</div>
+
+<div class="statBox">
+Best Return<br><b>${(bestReturn*100).toFixed(2)}%</b>
+</div>
+
+<div class="statBox">
+Most Popular Stock<br><b>${mostPopularStock}</b>
+</div>
+
+`;
+
+/* LEADERBOARD */
 
 data.forEach((row,i)=>{
 
@@ -228,6 +321,8 @@ tbody.appendChild(detailRow);
 
 });
 
+/* SAVE RANKS */
+
 let newRanks={};
 
 data.forEach((row,i)=>{
@@ -240,6 +335,48 @@ localStorage.setItem("leaderboardRanks",JSON.stringify(newRanks));
 
 document.getElementById("updateTime").innerText =
 "Last updated: "+new Date().toLocaleTimeString();
+
+/* HEATMAP */
+
+const heatmap=document.getElementById("heatmap");
+heatmap.innerHTML="";
+
+let stockMap={};
+
+data.forEach(player=>{
+player.stocks.forEach(s=>{
+
+if(!stockMap[s.ticker]){
+stockMap[s.ticker]=[];
+}
+
+stockMap[s.ticker].push(s.ret);
+
+});
+});
+
+Object.keys(stockMap).forEach(ticker=>{
+
+const avg=stockMap[ticker].reduce((a,b)=>a+b,0)/stockMap[ticker].length;
+
+let intensity=Math.min(Math.abs(avg)*5,1);
+
+let color=avg>=0
+?`rgba(34,197,94,${intensity})`
+:`rgba(239,68,68,${intensity})`;
+
+const box=document.createElement("div");
+box.className="heatBox";
+box.style.background=color;
+
+box.innerHTML=`
+${ticker}<br>
+${(avg*100).toFixed(2)}%
+`;
+
+heatmap.appendChild(box);
+
+});
 
 }
 
