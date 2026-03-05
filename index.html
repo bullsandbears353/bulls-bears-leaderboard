@@ -7,7 +7,7 @@
 <style>
 
 body{
-  font-family: Arial, sans-serif;
+  font-family:Arial;
   background:#0f172a;
   color:white;
   padding:40px;
@@ -15,39 +15,75 @@ body{
 
 h1{
   text-align:center;
+  margin-bottom:10px;
 }
 
 #updateTime{
   text-align:center;
-  opacity:0.7;
+  opacity:.7;
+  margin-bottom:25px;
+}
+
+.main{
+  display:flex;
+  gap:40px;
+  align-items:flex-start;
+}
+
+/* LEFT PANEL */
+
+.leftPanel{
+  width:260px;
+}
+
+.card{
+  background:#020617;
+  border-radius:10px;
+  padding:20px;
   margin-bottom:20px;
 }
 
-/* CLUB STATS */
-
-#clubStats{
-  display:flex;
-  justify-content:center;
-  gap:40px;
-  margin-bottom:30px;
+.card h2{
+  margin-top:0;
   font-size:18px;
-  flex-wrap:wrap;
+  border-bottom:1px solid #334155;
+  padding-bottom:8px;
 }
 
-.statBox{
-  background:#020617;
-  padding:15px 25px;
-  border-radius:8px;
-  text-align:center;
-  border:1px solid #334155;
+/* STATS */
+
+.stat{
+  display:flex;
+  justify-content:space-between;
+  padding:6px 0;
+  font-size:14px;
 }
 
-/* TABLE */
+/* HEATMAP */
+
+.heatmap{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+}
+
+.heatTile{
+  width:50px;
+  height:50px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  font-size:11px;
+  border-radius:6px;
+  font-weight:bold;
+}
+
+/* LEADERBOARD */
 
 table{
-  margin:auto;
   border-collapse:collapse;
-  width:60%;
+  width:650px;
   background:#020617;
 }
 
@@ -58,15 +94,11 @@ th,td{
 }
 
 tr{
-  transition:background 0.2s ease;
+  transition:background .2s ease;
 }
 
 tr:hover{
   background:#1e293b;
-}
-
-th{
-  background:#020617;
 }
 
 .bar-container{
@@ -83,54 +115,71 @@ th{
   background:#22c55e;
 }
 
-/* HEATMAP */
-
-#heatmapTitle{
-  text-align:center;
-  margin-top:40px;
-}
-
-#heatmap{
-  display:flex;
-  flex-wrap:wrap;
-  justify-content:center;
-  gap:10px;
-  margin-top:20px;
-}
-
-.heatBox{
-  padding:14px;
-  min-width:80px;
-  text-align:center;
-  border-radius:6px;
-  font-weight:bold;
-}
-
 </style>
 </head>
 
 <body>
 
 <h1>Finance Club Leaderboard</h1>
-
-<div id="clubStats"></div>
-
 <p id="updateTime"></p>
 
+<div class="main">
+
+<div class="leftPanel">
+
+<div class="card">
+<h2>Club Stats</h2>
+
+<div class="stat">
+<span>Participants</span>
+<span id="statPlayers">-</span>
+</div>
+
+<div class="stat">
+<span>Avg Return</span>
+<span id="statAvg">-</span>
+</div>
+
+<div class="stat">
+<span>Best Return</span>
+<span id="statBest">-</span>
+</div>
+
+<div class="stat">
+<span>Worst Return</span>
+<span id="statWorst">-</span>
+</div>
+
+</div>
+
+<div class="card">
+<h2>Market Heatmap</h2>
+<div id="heatmap" class="heatmap"></div>
+</div>
+
+</div>
+
+
+<div>
+
 <table id="leaderboard">
+
 <thead>
 <tr>
 <th>Rank</th>
 <th>Name</th>
-<th>Portfolio Value ($)</th>
+<th>Portfolio Value</th>
 <th>Return %</th>
 </tr>
 </thead>
+
 <tbody></tbody>
+
 </table>
 
-<h2 id="heatmapTitle">Club Market Heatmap</h2>
-<div id="heatmap"></div>
+</div>
+
+</div>
 
 <script>
 
@@ -146,9 +195,11 @@ const text = await response.text();
 
 const rows = text.trim().split("\n").slice(1);
 
+let allStocks = {};
+
 const data = rows.map(r=>{
 
-const cols = r.split(",");
+const cols=r.split(",");
 
 let stocks=[];
 
@@ -156,12 +207,17 @@ for(let i=3;i<cols.length;i+=4){
 
 if(cols[i]){
 
+let ticker=cols[i];
+let ret=parseFloat(cols[i+3]);
+
 stocks.push({
-ticker:cols[i],
+ticker:ticker,
 shares:cols[i+1],
 value:parseFloat(cols[i+2]),
-ret:parseFloat(cols[i+3])
+ret:ret
 });
+
+allStocks[ticker]=ret;
 
 }
 
@@ -180,70 +236,75 @@ stocks
 
 data.sort((a,b)=>b.ret-a.ret);
 
-const tbody=document.querySelector("#leaderboard tbody");
-tbody.innerHTML="";
+/* CLUB STATS */
 
-/* CLUB STATS CALCULATION */
+let avg = data.reduce((a,b)=>a+b.ret,0)/data.length;
 
-let totalTraders=data.length;
+document.getElementById("statPlayers").innerText=data.length;
+document.getElementById("statAvg").innerText=(avg*100).toFixed(2)+"%";
+document.getElementById("statBest").innerText=(data[0].ret*100).toFixed(2)+"%";
+document.getElementById("statWorst").innerText=(data[data.length-1].ret*100).toFixed(2)+"%";
 
-let avgReturn=data.reduce((sum,p)=>sum+p.ret,0)/totalTraders;
+/* HEATMAP */
 
-let bestReturn=Math.max(...data.map(p=>p.ret));
+let stockArray = Object.entries(allStocks);
 
-let stockCount={};
+stockArray.sort((a,b)=>b[1]-a[1]);
 
-data.forEach(p=>{
-p.stocks.forEach(s=>{
-stockCount[s.ticker]=(stockCount[s.ticker]||0)+1;
-});
-});
+const heatmap=document.getElementById("heatmap");
+heatmap.innerHTML="";
 
-let mostPopularStock=Object.keys(stockCount).reduce((a,b)=>
-stockCount[a]>stockCount[b]?a:b);
+let best = stockArray[0][1];
+let worst = stockArray[stockArray.length-1][1];
 
-/* DISPLAY CLUB STATS */
+stockArray.forEach(s=>{
 
-document.getElementById("clubStats").innerHTML=`
+let ratio=(s[1]-worst)/(best-worst);
 
-<div class="statBox">
-Total Traders<br><b>${totalTraders}</b>
-</div>
+let r=Math.floor(239-(239-34)*ratio);
+let g=Math.floor(68+(197-68)*ratio);
+let b=Math.floor(68-(68-94)*ratio);
 
-<div class="statBox">
-Average Return<br><b>${(avgReturn*100).toFixed(2)}%</b>
-</div>
+let color=`rgb(${r},${g},${b})`;
 
-<div class="statBox">
-Best Return<br><b>${(bestReturn*100).toFixed(2)}%</b>
-</div>
+let tile=document.createElement("div");
 
-<div class="statBox">
-Most Popular Stock<br><b>${mostPopularStock}</b>
-</div>
+tile.className="heatTile";
+tile.style.background=color;
 
+tile.innerHTML=`
+${s[0]}
+<br>
+${(s[1]*100).toFixed(1)}%
 `;
 
+heatmap.appendChild(tile);
+
+});
+
 /* LEADERBOARD */
+
+const tbody=document.querySelector("#leaderboard tbody");
+tbody.innerHTML="";
 
 data.forEach((row,i)=>{
 
 let medal="";
 let medalColor="";
 
-if(i===0){ medal="🥇 "; medalColor="#FFD700";}
-else if(i===1){ medal="🥈 "; medalColor="#C0C0C0";}
-else if(i===2){ medal="🥉 "; medalColor="#CD7F32";}
+if(i===0){medal="🥇 "; medalColor="#FFD700";}
+else if(i===1){medal="🥈 "; medalColor="#C0C0C0";}
+else if(i===2){medal="🥉 "; medalColor="#CD7F32";}
 
 const prevRank = previousRanks[row.name];
 let change="";
 
 if(prevRank){
 
-const diff = prevRank-(i+1);
+let diff=prevRank-(i+1);
 
-if(diff>0) change="⬆️ "+diff;
-if(diff<0) change="⬇️ "+Math.abs(diff);
+if(diff>0) change="⬆ "+diff;
+if(diff<0) change="⬇ "+Math.abs(diff);
 
 }
 
@@ -254,16 +315,18 @@ tr.innerHTML=`
 <td>${i+1}</td>
 
 <td>
-<div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;"
+
+<div style="display:flex; justify-content:space-between; cursor:pointer;"
 onclick="toggleRow(${i})">
 
-<span style="color:${medalColor}; font-weight:bold;">
+<span style="color:${medalColor}; font-weight:bold">
 ${medal}${row.name} ${change}
 </span>
 
-<span id="arrow-${i}" style="transition:transform 0.3s ease;">▼</span>
+<span id="arrow-${i}" style="transition:transform .3s">▼</span>
 
 </div>
+
 </td>
 
 <td>
@@ -276,10 +339,8 @@ $${row.value.toFixed(2)}
 
 </td>
 
-<td style="color:${row.ret>=0 ? '#22c55e':'#ef4444'}">
-
+<td style="color:${row.ret>=0?'#22c55e':'#ef4444'}">
 ${(row.ret*100).toFixed(2)}%
-
 </td>
 
 `;
@@ -293,18 +354,16 @@ detailRow.innerHTML=`
 
 <td colspan="4">
 
-<div id="content-${i}" style="max-height:0; overflow:hidden; transition:max-height 0.4s ease;">
+<div id="content-${i}" style="max-height:0; overflow:hidden; transition:max-height .4s">
 
 ${row.stocks.map(s=>`
 
-<div style="display:flex; justify-content:space-between; padding:6px 0;">
+<div style="display:flex; justify-content:space-between; padding:6px 0">
 
 <span>${s.ticker} (${parseFloat(s.shares).toFixed(2)} shares)</span>
 
-<span style="color:${s.ret>=0 ? '#22c55e':'#ef4444'}">
-
+<span style="color:${s.ret>=0?'#22c55e':'#ef4444'}">
 ${(s.ret*100).toFixed(2)}%
-
 </span>
 
 </div>
@@ -321,8 +380,6 @@ tbody.appendChild(detailRow);
 
 });
 
-/* SAVE RANKS */
-
 let newRanks={};
 
 data.forEach((row,i)=>{
@@ -335,48 +392,6 @@ localStorage.setItem("leaderboardRanks",JSON.stringify(newRanks));
 
 document.getElementById("updateTime").innerText =
 "Last updated: "+new Date().toLocaleTimeString();
-
-/* HEATMAP */
-
-const heatmap=document.getElementById("heatmap");
-heatmap.innerHTML="";
-
-let stockMap={};
-
-data.forEach(player=>{
-player.stocks.forEach(s=>{
-
-if(!stockMap[s.ticker]){
-stockMap[s.ticker]=[];
-}
-
-stockMap[s.ticker].push(s.ret);
-
-});
-});
-
-Object.keys(stockMap).forEach(ticker=>{
-
-const avg=stockMap[ticker].reduce((a,b)=>a+b,0)/stockMap[ticker].length;
-
-let intensity=Math.min(Math.abs(avg)*5,1);
-
-let color=avg>=0
-?`rgba(34,197,94,${intensity})`
-:`rgba(239,68,68,${intensity})`;
-
-const box=document.createElement("div");
-box.className="heatBox";
-box.style.background=color;
-
-box.innerHTML=`
-${ticker}<br>
-${(avg*100).toFixed(2)}%
-`;
-
-heatmap.appendChild(box);
-
-});
 
 }
 
